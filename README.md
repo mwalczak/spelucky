@@ -20,7 +20,7 @@ A keyboard or Bluetooth game controller also works (arrows/WASD, Space/Z jump, X
 
 ## Installing on the tablet
 
-Every push to the default branch is built by GitHub Actions and published as a
+Every push to `main` is built by GitHub Actions and published as a
 [GitHub Release](../../releases/latest). On the tablet, open the latest release, download
 `spelucky.apk` and open it. Android will ask to allow installs from the browser once.
 Newer builds install over older ones, and saved records are kept.
