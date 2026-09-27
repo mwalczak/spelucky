@@ -33,10 +33,11 @@ jobs:
           name: spelucky-apk
           path: spelucky.apk
 
-      # Every push to the default branch (main) becomes a GitHub Release, so the newest APK is always at
+      # Every push to main (or a manual "Run workflow" on main) becomes a GitHub Release,
+      # so the newest APK is always at
       # https://github.com/<owner>/<repo>/releases/latest/download/spelucky.apk
       - name: Publish release
-        if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
