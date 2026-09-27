@@ -38,7 +38,7 @@ class Music {
                     .also {
                         it.write(pcm, 0, pcm.size)
                         it.setLoopPoints(0, pcm.size, -1)
-                        it.setVolume(0.5f)
+                        it.setVolume(0.35f) // quiet enough for sound effects to stand out
                     }
             } catch (e: Exception) {
                 null // No music is better than a crash.

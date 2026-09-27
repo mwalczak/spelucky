@@ -46,7 +46,7 @@ Open the folder in **Android Studio** and press Run, or use the command line:
 | `game/Game.kt` | Game rules: damage, collecting, ropes, levels, game over. |
 | `ui/Renderer.kt` | All drawing, including colors and sprites. |
 | `ui/TouchControls.kt` | On-screen buttons and their layout. |
-| `ui/SoundFx.kt` | The synthesized sound effects. |
+| `ui/SfxSynth.kt` | The sound effects (coin, gem, whip, hurt, death, ...). Each one is a few lines of tones and noise. |
 | `ui/MusicSynth.kt` | The background music. The tune is written as note names (`"A4:2 C5:2 ..."`), so it is easy to change. |
 
 The `game` package has no Android code, so it's covered by fast JVM unit tests in `app/src/test`.
