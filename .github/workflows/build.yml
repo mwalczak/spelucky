@@ -21,8 +21,12 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Run tests and build APK
-        run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
+      # If any test fails, the job stops here: no APK and no release.
+      - name: Run tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Build APK
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Rename APK
         run: cp app/build/outputs/apk/debug/app-debug.apk spelucky.apk
