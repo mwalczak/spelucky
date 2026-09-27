@@ -16,7 +16,9 @@ are synthesized when the app starts.
 - You have 4 hearts. Falling onto spikes is deadly, and very long falls hurt.
   When you die, the run starts over from level 1 with a brand-new random cave.
 
-A keyboard or Bluetooth game controller also works (arrows/WASD, Space/Z jump, X whip, C rope, P pause).
+The ♪ button in the top-right corner turns the music on or off.
+
+A keyboard or Bluetooth game controller also works (arrows/WASD, Space/Z jump, X whip, C rope, P pause, M music).
 
 ## Installing on the tablet
 
@@ -45,6 +47,7 @@ Open the folder in **Android Studio** and press Run, or use the command line:
 | `ui/Renderer.kt` | All drawing, including colors and sprites. |
 | `ui/TouchControls.kt` | On-screen buttons and their layout. |
 | `ui/SoundFx.kt` | The synthesized sound effects. |
+| `ui/MusicSynth.kt` | The background music. The tune is written as note names (`"A4:2 C5:2 ..."`), so it is easy to change. |
 
 The `game` package has no Android code, so it's covered by fast JVM unit tests in `app/src/test`.
 `LevelGeneratorTest` checks that hundreds of random levels can all be finished.

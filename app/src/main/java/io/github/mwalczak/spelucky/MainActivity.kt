@@ -11,6 +11,7 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import io.github.mwalczak.spelucky.ui.GameView
+import io.github.mwalczak.spelucky.ui.Music
 import io.github.mwalczak.spelucky.ui.SoundFx
 import io.github.mwalczak.spelucky.game.Btn
 import io.github.mwalczak.spelucky.game.Game
@@ -19,6 +20,7 @@ class MainActivity : Activity() {
 
     private lateinit var view: GameView
     private lateinit var sfx: SoundFx
+    private lateinit var music: Music
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,7 +30,8 @@ class MainActivity : Activity() {
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
         sfx = SoundFx(this)
-        view = GameView(this, sfx)
+        music = Music()
+        view = GameView(this, sfx, music)
         setContentView(view)
         hideSystemBars()
     }
@@ -46,6 +49,7 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         super.onDestroy()
         sfx.release()
+        music.release()
     }
 
     @Deprecated("Deprecated in Java")
@@ -88,6 +92,7 @@ class MainActivity : Activity() {
         KeyEvent.KEYCODE_X, KeyEvent.KEYCODE_J, KeyEvent.KEYCODE_BUTTON_X, KeyEvent.KEYCODE_BUTTON_B -> Btn.WHIP
         KeyEvent.KEYCODE_C, KeyEvent.KEYCODE_K, KeyEvent.KEYCODE_BUTTON_Y -> Btn.ROPE
         KeyEvent.KEYCODE_P, KeyEvent.KEYCODE_ESCAPE, KeyEvent.KEYCODE_BUTTON_START -> Btn.PAUSE
+        KeyEvent.KEYCODE_M -> Btn.MUSIC
         KeyEvent.KEYCODE_ENTER -> Btn.TAP
         else -> 0
     }

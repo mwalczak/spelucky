@@ -128,6 +128,7 @@ class Renderer(private val density: Float) {
                 drawGameOver(c, g, w, h)
             }
         }
+        controls.drawMusicButton(c, g.musicOn)
     }
 
     // ------------------------------------------------------------------ world

@@ -26,6 +26,7 @@ class TouchControls(private val density: Float) {
     val whip = Button(Btn.WHIP, "WHIP", 0xFFFFA726.toInt())
     val rope = Button(Btn.ROPE, "ROPE", 0xFFD7A86E.toInt())
     val pause = Button(Btn.PAUSE, "", 0xFFFFFFFF.toInt())
+    val music = Button(Btn.MUSIC, "", 0xFFFFFFFF.toInt())
     private val actionButtons = listOf(jump, whip, rope)
 
     var padX = 0f
@@ -65,13 +66,17 @@ class TouchControls(private val density: Float) {
         pause.r = dp(26f)
         pause.cx = w - dp(46f)
         pause.cy = dp(46f)
+        music.r = dp(26f)
+        music.cx = pause.cx - dp(70f)
+        music.cy = pause.cy
     }
 
     private fun buttonAt(x: Float, y: Float): Button? =
         actionButtons.firstOrNull { it.hit(x, y, 1.25f) }
 
     private fun roleAt(x: Float, y: Float): Int = when {
-        pause.hit(x, y, 1.5f) -> Btn.PAUSE
+        pause.hit(x, y, 1.3f) -> Btn.PAUSE
+        music.hit(x, y, 1.3f) -> Btn.MUSIC
         buttonAt(x, y) != null -> buttonAt(x, y)!!.bit
         x < screenW * 0.45f -> DPAD
         else -> 0
@@ -96,8 +101,9 @@ class TouchControls(private val density: Float) {
                 val id = e.getPointerId(i)
                 posX[id] = e.getX(i)
                 posY[id] = e.getY(i)
-                roles[id] = roleAt(e.getX(i), e.getY(i))
-                input.tap()
+                val role = roleAt(e.getX(i), e.getY(i))
+                roles[id] = role
+                if (role and Btn.NOT_A_TAP == 0) input.tap()
             }
             MotionEvent.ACTION_MOVE -> {
                 for (i in 0 until e.pointerCount) {
@@ -108,7 +114,7 @@ class TouchControls(private val density: Float) {
                     posY[id] = y
                     val role = roles[id] ?: continue
                     // Let a thumb slide from one action button to another.
-                    if (role != DPAD && role != Btn.PAUSE) roles[id] = buttonAt(x, y)?.bit ?: 0
+                    if (role != DPAD && role and Btn.NOT_A_TAP == 0) roles[id] = buttonAt(x, y)?.bit ?: 0
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
@@ -156,6 +162,32 @@ class TouchControls(private val density: Float) {
         val bh = pause.r * 0.5f
         c.drawRect(pause.cx - bw * 2f, pause.cy - bh, pause.cx - bw * 0.7f, pause.cy + bh, fill)
         c.drawRect(pause.cx + bw * 0.7f, pause.cy - bh, pause.cx + bw * 2f, pause.cy + bh, fill)
+    }
+
+    /** The music on/off button; shown on every screen. */
+    fun drawMusicButton(c: Canvas, on: Boolean) {
+        val b = music
+        fill.color = 0x44000000
+        c.drawCircle(b.cx, b.cy, b.r, fill)
+        fill.color = if (on) 0xCCFFFFFF.toInt() else 0x66FFFFFF
+        val s = b.r / 26f
+        // A pair of eighth notes.
+        c.drawCircle(b.cx - 8 * s, b.cy + 8 * s, 5 * s, fill)
+        c.drawCircle(b.cx + 7 * s, b.cy + 5 * s, 5 * s, fill)
+        c.drawRect(b.cx - 5 * s, b.cy - 11 * s, b.cx - 2.5f * s, b.cy + 8 * s, fill)
+        c.drawRect(b.cx + 10 * s, b.cy - 14 * s, b.cx + 12.5f * s, b.cy + 5 * s, fill)
+        path.reset()
+        path.moveTo(b.cx - 5 * s, b.cy - 11 * s)
+        path.lineTo(b.cx + 12.5f * s, b.cy - 14 * s)
+        path.lineTo(b.cx + 12.5f * s, b.cy - 9 * s)
+        path.lineTo(b.cx - 5 * s, b.cy - 6 * s)
+        path.close()
+        c.drawPath(path, fill)
+        if (!on) {
+            stroke.color = 0xEEFF5252.toInt()
+            stroke.strokeWidth = dp(3f)
+            c.drawLine(b.cx - b.r * 0.6f, b.cy + b.r * 0.6f, b.cx + b.r * 0.6f, b.cy - b.r * 0.6f, stroke)
+        }
     }
 
     private fun drawArrow(c: Canvas, x: Float, y: Float, angle: Float, down: Boolean) {

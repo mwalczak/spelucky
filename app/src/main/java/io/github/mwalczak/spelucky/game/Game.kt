@@ -47,7 +47,12 @@ class Game(seed: Long = System.nanoTime()) {
     var newRecord = false
         private set
 
+    var musicOn = true
+    /** Whether background music should be playing right now. */
+    val wantsMusic get() = musicOn && !paused && state != State.DEAD
+
     var onSound: (Sound) -> Unit = {}
+    var onMusicSetting: (on: Boolean) -> Unit = {}
     var onRecords: (depth: Int, money: Int) -> Unit = { _, _ -> }
 
     init {
@@ -106,6 +111,10 @@ class Game(seed: Long = System.nanoTime()) {
     fun update(dt: Float, input: InputState) {
         time += dt
         stateTime += dt
+        if (input.isPressed(Btn.MUSIC)) {
+            musicOn = !musicOn
+            onMusicSetting(musicOn)
+        }
         when (state) {
             State.TITLE -> {
                 val span = max(0f, level.pixelWidth - viewW)

@@ -12,7 +12,7 @@ import io.github.mwalczak.spelucky.game.InputState
 
 /** Runs the game loop on its own thread and draws to a hardware-accelerated surface. */
 @SuppressLint("ViewConstructor")
-class GameView(context: Context, private val sfx: SoundFx) : SurfaceView(context), SurfaceHolder.Callback {
+class GameView(context: Context, private val sfx: SoundFx, private val music: Music) : SurfaceView(context), SurfaceHolder.Callback {
 
     val input = Input()
     val game = Game()
@@ -28,7 +28,9 @@ class GameView(context: Context, private val sfx: SoundFx) : SurfaceView(context
         isFocusable = true
         game.bestDepth = prefs.getInt("bestDepth", 0)
         game.bestMoney = prefs.getInt("bestMoney", 0)
+        game.musicOn = prefs.getBoolean("music", true)
         game.onSound = { sfx.play(it) }
+        game.onMusicSetting = { prefs.edit().putBoolean("music", it).apply() }
         game.onRecords = { depth, money ->
             prefs.edit().putInt("bestDepth", depth).putInt("bestMoney", money).apply()
         }
@@ -47,11 +49,13 @@ class GameView(context: Context, private val sfx: SoundFx) : SurfaceView(context
         running = false
         thread?.join(1000)
         thread = null
+        music.setPlaying(false)
     }
 
     /** Called when the app goes to the background. */
     fun pauseGame() {
         if (game.state == Game.State.PLAYING) game.paused = true
+        music.setPlaying(false)
     }
 
     private fun loop() {
@@ -67,6 +71,7 @@ class GameView(context: Context, private val sfx: SoundFx) : SurfaceView(context
                 game.update(STEP.toFloat(), state)
                 acc -= STEP
             }
+            music.setPlaying(game.wantsMusic)
             val canvas = try {
                 holder.lockHardwareCanvas()
             } catch (e: Exception) {

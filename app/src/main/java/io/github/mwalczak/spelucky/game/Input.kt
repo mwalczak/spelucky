@@ -14,6 +14,10 @@ object Btn {
     const val PAUSE = 128
     /** Any tap on the screen (used for menus). Only ever "pressed", never held. */
     const val TAP = 256
+    const val MUSIC = 512
+
+    /** Buttons that shouldn't also count as "tap anywhere" (e.g. starting the game). */
+    const val NOT_A_TAP = PAUSE or MUSIC
 }
 
 /** What the game sees during one update step. */
@@ -51,7 +55,10 @@ class Input {
         synchronized(this) {
             val old = keys
             keys = if (down) old or button else old and button.inv()
-            if (down && old and button == 0) latch.getAndUpdate { it or button or Btn.TAP }
+            if (down && old and button == 0) {
+                val tap = if (button and Btn.NOT_A_TAP != 0) 0 else Btn.TAP
+                latch.getAndUpdate { it or button or tap }
+            }
         }
     }
 
