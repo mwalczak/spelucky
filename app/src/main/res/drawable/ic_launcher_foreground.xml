@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Explorer's hat -->
+    <path android:fillColor="#8B5A2B" android:pathData="M40,34h28v16h-28z"/>
+    <path android:fillColor="#3B2412" android:pathData="M40,44h28v5h-28z"/>
+    <path android:fillColor="#6B4423" android:pathData="M28,49h52v6h-52z"/>
+    <!-- Face -->
+    <path android:fillColor="#F1C27D" android:pathData="M40,55h28v18h-28z"/>
+    <path android:fillColor="#1A1A1A" android:pathData="M58,59h4v5h-4z"/>
+    <!-- Gold nugget -->
+    <path android:fillColor="#F5C542" android:pathData="M44,76h20v8h-20z"/>
+    <path android:fillColor="#FFF2A8" android:pathData="M47,77h5v3h-5z"/>
+</vector>
