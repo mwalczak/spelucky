@@ -9,16 +9,27 @@ import android.view.SurfaceView
 import io.github.mwalczak.spelucky.game.Game
 import io.github.mwalczak.spelucky.game.Input
 import io.github.mwalczak.spelucky.game.InputState
+import io.github.mwalczak.spelucky.game.SubmitStatus
+import io.github.mwalczak.spelucky.BuildConfig
 
 /** Runs the game loop on its own thread and draws to a hardware-accelerated surface. */
 @SuppressLint("ViewConstructor")
-class GameView(context: Context, private val sfx: SoundFx, private val music: Music) : SurfaceView(context), SurfaceHolder.Callback {
+class GameView(
+    context: Context,
+    private val sfx: SoundFx,
+    private val music: Music,
+    /** Shows the "enter your name" dialog and reports the cleaned name, or null if skipped. */
+    private val askName: (current: String?, done: (String?) -> Unit) -> Unit,
+) : SurfaceView(context), SurfaceHolder.Callback {
 
     val input = Input()
     val game = Game()
     private val controls = TouchControls(resources.displayMetrics.density)
     private val renderer = Renderer(resources.displayMetrics.density)
     private val prefs = context.getSharedPreferences("spelucky", Context.MODE_PRIVATE)
+    private val leaderboard = LeaderboardClient(
+        BuildConfig.SCORES_URL, BuildConfig.SCORES_KEY, "spelucky", prefs, game.scores,
+    )
 
     @Volatile private var running = false
     private var thread: Thread? = null
@@ -34,7 +45,38 @@ class GameView(context: Context, private val sfx: SoundFx, private val music: Mu
         game.onRecords = { depth, money ->
             prefs.edit().putInt("bestDepth", depth).putInt("bestMoney", money).apply()
         }
+        game.onGameOver = { depth, money -> post { sendScore(money, depth) } }
+        leaderboard.refresh()
     }
+
+    private fun sendScore(money: Int, depth: Int) {
+        if (!game.scores.enabled || money <= 0) return
+        if (game.scores.playerName != null) {
+            leaderboard.submit(money, depth)
+            return
+        }
+        game.scores.status = SubmitStatus.AskingName
+        askName(null) { name ->
+            if (name == null) {
+                game.scores.status = SubmitStatus.None
+            } else {
+                leaderboard.setName(name)
+                leaderboard.submit(money, depth)
+            }
+        }
+    }
+
+    private fun changeName() {
+        askName(game.scores.playerName) { name ->
+            if (name != null) {
+                leaderboard.setName(name)
+                leaderboard.refresh()
+            }
+        }
+    }
+
+    /** Called when the app comes back to the front. */
+    fun refreshLeaderboard() = leaderboard.refresh()
 
     override fun surfaceCreated(holder: SurfaceHolder) {
         running = true
@@ -91,6 +133,12 @@ class GameView(context: Context, private val sfx: SoundFx, private val music: Mu
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && game.state == Game.State.TITLE &&
+            renderer.nameRect.contains(event.x, event.y)
+        ) {
+            changeName()
+            return true
+        }
         controls.onTouch(event, input)
         return true
     }

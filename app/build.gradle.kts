@@ -13,6 +13,16 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1"
+
+        // Online leaderboard (github.com/mwalczak/mobile-scores). Without a key, e.g. in a
+        // local build, the game works normally and just hides the leaderboard.
+        val scoresKey = System.getenv("SCORES_KEY") ?: (project.findProperty("scoresKey") as String?) ?: ""
+        buildConfigField("String", "SCORES_URL", "\"https://scores.walczaki.com\"")
+        buildConfigField("String", "SCORES_KEY", "\"$scoresKey\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     signingConfigs {

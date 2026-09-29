@@ -54,6 +54,10 @@ class Game(seed: Long = System.nanoTime()) {
     var onSound: (Sound) -> Unit = {}
     var onMusicSetting: (on: Boolean) -> Unit = {}
     var onRecords: (depth: Int, money: Int) -> Unit = { _, _ -> }
+    /** Called once when a run ends, to send the score to the online leaderboard. */
+    var onGameOver: (depth: Int, money: Int) -> Unit = { _, _ -> }
+
+    val scores = ScoreBoard()
 
     init {
         buildLevel()
@@ -65,6 +69,7 @@ class Game(seed: Long = System.nanoTime()) {
         depth = 1
         player = Player(0f, 0f)
         newRecord = false
+        scores.status = SubmitStatus.None
         buildLevel()
         setState(State.INTRO)
     }
@@ -224,6 +229,7 @@ class Game(seed: Long = System.nanoTime()) {
             sound(Sound.DEATH)
             setState(State.DEAD)
             saveRecords()
+            onGameOver(depth, p.money)
         } else {
             sound(Sound.HURT)
         }

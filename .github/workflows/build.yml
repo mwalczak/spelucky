@@ -26,6 +26,8 @@ jobs:
         run: ./gradlew testDebugUnitTest --stacktrace
 
       - name: Build APK
+        env:
+          SCORES_KEY: ${{ secrets.SCORES_KEY }}
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Rename APK

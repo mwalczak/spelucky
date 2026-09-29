@@ -11,6 +11,8 @@ import io.github.mwalczak.spelucky.game.Game
 import io.github.mwalczak.spelucky.game.Level
 import io.github.mwalczak.spelucky.game.Pickup
 import io.github.mwalczak.spelucky.game.Player
+import io.github.mwalczak.spelucky.game.ScoreBoard
+import io.github.mwalczak.spelucky.game.SubmitStatus
 import io.github.mwalczak.spelucky.game.Snake
 import io.github.mwalczak.spelucky.game.TILE
 import io.github.mwalczak.spelucky.game.Tile
@@ -568,19 +570,69 @@ class Renderer(private val density: Float) {
         aa.alpha = 255
     }
 
+    /** Where the "your name" line is on the title screen, so a tap there can change it. */
+    val nameRect = RectF()
+
     private fun drawTitle(c: Canvas, g: Game, w: Float, h: Float) {
         dim(c, 120)
-        drawLabel(c, "SPELUCKY", w / 2, h * 0.36f, dp(110f), C.GOLD, 255)
-        drawLabel(c, "Dig deep. Grab the gold. Find the exit.", w / 2, h * 0.36f + dp(56f), dp(26f), 0xFFFFFFFF.toInt(), 230)
+        val board = g.scores
+        // With the online leaderboard on the right, the title moves to the left.
+        val cx = if (board.enabled) w * 0.35f else w / 2
+        drawLabel(c, "SPELUCKY", cx, h * 0.36f, dp(110f), C.GOLD, 255)
+        drawLabel(c, "Dig deep. Grab the gold. Find the exit.", cx, h * 0.36f + dp(56f), dp(26f), 0xFFFFFFFF.toInt(), 230)
         if (g.bestDepth > 0) {
-            drawLabel(c, "Deepest level: ${g.bestDepth}     Most loot: $${g.bestMoney}", w / 2, h * 0.56f, dp(24f), 0xFFFFE082.toInt(), 255)
+            drawLabel(c, "Deepest level: ${g.bestDepth}     Most loot: $${g.bestMoney}", cx, h * 0.56f, dp(24f), 0xFFFFE082.toInt(), 255)
         }
         val a = (170 + 85 * sin(g.time * 4f)).toInt()
-        drawLabel(c, "Tap to start", w / 2, h * 0.7f, dp(40f), 0xFFFFFFFF.toInt(), a)
+        drawLabel(c, "Tap to start", cx, h * 0.7f, dp(40f), 0xFFFFFFFF.toInt(), a)
+        if (board.enabled) drawBoard(c, board, w, h) else nameRect.setEmpty()
         drawLabel(
             c, "Left side: move, climb, ▲ at a door to go in     Right side: JUMP  WHIP  ROPE",
             w / 2, h - dp(28f), dp(18f), 0xFFCCCCCC.toInt(), 220,
         )
+    }
+
+    private fun drawBoard(c: Canvas, board: ScoreBoard, w: Float, h: Float) {
+        val left = w * 0.66f
+        val right = w - dp(24f)
+        val top = dp(90f)
+        val rowH = dp(40f)
+        val bottom = top + dp(70f) + rowH * LeaderboardClient.TOP_COUNT + dp(70f)
+        aa.color = 0x99000000.toInt()
+        rect.set(left, top, right, bottom)
+        c.drawRoundRect(rect, dp(16f), dp(16f), aa)
+        val mid = (left + right) / 2
+        drawLabel(c, "TOP EXPLORERS", mid, top + dp(46f), dp(28f), C.GOLD, 255)
+
+        val rows = board.top
+        var y = top + dp(70f) + rowH * 0.7f
+        if (rows.isEmpty()) {
+            val msg = when {
+                board.loading -> "Loading..."
+                board.offline -> "No internet connection"
+                else -> "No scores yet. Be the first!"
+            }
+            drawLabel(c, msg, mid, y + rowH, dp(20f), 0xFFCCCCCC.toInt(), 255)
+        }
+        val me = board.playerName?.lowercase()
+        text.textSize = dp(22f)
+        for (r in rows) {
+            val mine = r.player.lowercase() == me
+            text.color = if (mine) C.GOLD else 0xFFFFFFFF.toInt()
+            text.textAlign = Paint.Align.LEFT
+            c.drawText("${r.rank}.", left + dp(20f), y, text)
+            c.drawText(r.player, left + dp(58f), y, text)
+            text.textAlign = Paint.Align.RIGHT
+            c.drawText("$${r.score}", right - dp(20f), y, text)
+            y += rowH
+        }
+        text.textAlign = Paint.Align.CENTER
+
+        // "Playing as ..." line, tappable to change the name.
+        val footerY = bottom - dp(28f)
+        val label = board.playerName?.let { "Playing as $it  ✎" } ?: "Tap here to enter your name"
+        drawLabel(c, label, mid, footerY, dp(20f), 0xFFB3E5FC.toInt(), 255)
+        nameRect.set(left, footerY - dp(34f), right, bottom)
     }
 
     private fun drawIntro(c: Canvas, g: Game, w: Float, h: Float) {
@@ -607,6 +659,15 @@ class Renderer(private val density: Float) {
         if (g.newRecord) {
             drawLabel(c, "New record!", w / 2, h * 0.36f + dp(104f), dp(30f), C.GOLD, a)
         }
+        val online = when (val s = g.scores.status) {
+            is SubmitStatus.Done ->
+                (if (s.personalBest) "Personal best! " else "") + "You are #${s.rank} on the leaderboard" to C.GOLD
+            SubmitStatus.Sending -> "Sending your score..." to 0xFFCCCCCC.toInt()
+            SubmitStatus.Queued -> "No internet: your score will be sent later" to 0xFFCCCCCC.toInt()
+            is SubmitStatus.Rejected -> "Leaderboard: ${s.message}" to 0xFFFF8A80.toInt()
+            SubmitStatus.AskingName, SubmitStatus.None -> null
+        }
+        if (online != null) drawLabel(c, online.first, w / 2, h * 0.36f + dp(148f), dp(28f), online.second, a)
         if (g.stateTime > 1.5f) {
             val pulse = (170 + 85 * sin(g.time * 4f)).toInt()
             drawLabel(c, "Tap to play again", w / 2, h * 0.72f, dp(40f), 0xFFFFFFFF.toInt(), pulse)

@@ -1,6 +1,10 @@
 package io.github.mwalczak.spelucky
 
 import android.app.Activity
+import android.app.AlertDialog
+import android.text.InputFilter
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.os.Build
 import android.os.Bundle
 import android.view.InputDevice
@@ -15,6 +19,7 @@ import io.github.mwalczak.spelucky.ui.Music
 import io.github.mwalczak.spelucky.ui.SoundFx
 import io.github.mwalczak.spelucky.game.Btn
 import io.github.mwalczak.spelucky.game.Game
+import io.github.mwalczak.spelucky.game.ScoreBoard
 
 class MainActivity : Activity() {
 
@@ -31,7 +36,7 @@ class MainActivity : Activity() {
         }
         sfx = SoundFx(this)
         music = Music()
-        view = GameView(this, sfx, music)
+        view = GameView(this, sfx, music, ::askName)
         setContentView(view)
         hideSystemBars()
     }
@@ -39,6 +44,48 @@ class MainActivity : Activity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) hideSystemBars()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        view.refreshLeaderboard()
+    }
+
+    /** A simple "what's your name?" dialog for the online leaderboard. */
+    private fun askName(current: String?, done: (String?) -> Unit) {
+        val field = EditText(this).apply {
+            setSingleLine()
+            filters = arrayOf(InputFilter.LengthFilter(ScoreBoard.MAX_NAME))
+            hint = "Your name"
+            setText(current.orEmpty())
+            setSelection(text.length)
+        }
+        val box = FrameLayout(this).apply {
+            val pad = (24 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad / 2, pad, 0)
+            addView(field)
+        }
+        val dialog = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(if (current == null) "Join the leaderboard!" else "Change your name")
+            .setMessage("Pick a nickname (up to ${ScoreBoard.MAX_NAME} letters). Don't use your full real name.")
+            .setView(box)
+            .setPositiveButton("Save", null)
+            .setNegativeButton("Not now") { _, _ -> done(null) }
+            .setOnCancelListener { done(null) }
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val name = ScoreBoard.cleanName(field.text.toString())
+                if (name == null) {
+                    field.error = "Use letters, numbers, spaces, _ . -"
+                } else {
+                    dialog.dismiss()
+                    done(name)
+                }
+            }
+        }
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
     }
 
     override fun onPause() {

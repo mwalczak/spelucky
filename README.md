@@ -18,6 +18,12 @@ are synthesized when the app starts.
 
 The ♪ button in the top-right corner turns the music on or off.
 
+**Online leaderboard:** when a run ends, the loot and level are sent to
+[scores.walczaki.com](https://scores.walczaki.com) (backend: [mwalczak/mobile-scores](https://github.com/mwalczak/mobile-scores)).
+The first time, the game asks for a nickname; tap "Playing as ..." on the title screen to change it.
+Scores made without internet are kept and sent later. The leaderboard only appears in builds made
+with the `SCORES_KEY` repository secret (the key for `spelucky` in mobile-scores' `GAME_KEYS`).
+
 A keyboard or Bluetooth game controller also works (arrows/WASD, Space/Z jump, X whip, C rope, P pause, M music).
 
 ## Installing on the tablet
@@ -45,6 +51,7 @@ Open the folder in **Android Studio** and press Run, or use the command line:
 | `game/Actors.kt` | Snakes, bats, treasure. |
 | `game/Game.kt` | Game rules: damage, collecting, ropes, levels, game over. |
 | `ui/Renderer.kt` | All drawing, including colors and sprites. |
+| `ui/LeaderboardClient.kt` | Sends scores to the online leaderboard and loads the top 8. |
 | `ui/TouchControls.kt` | On-screen buttons and their layout. |
 | `ui/SfxSynth.kt` | The sound effects (coin, gem, whip, hurt, death, ...). Each one is a few lines of tones and noise. |
 | `ui/MusicSynth.kt` | The background music. The tune is written as note names (`"A4:2 C5:2 ..."`), so it is easy to change. |
