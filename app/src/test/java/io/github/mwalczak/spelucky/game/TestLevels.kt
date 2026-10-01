@@ -2,7 +2,7 @@ package io.github.mwalczak.spelucky.game
 
 /**
  * Builds a level from ASCII art: '#' dirt, 'L' ladder, '^' spikes,
- * 'P' player start, 'E' exit, 's' snake. The outside is always solid.
+ * 'P' player start, 'E' exit, 's' snake, 'c' caveman. The outside is always solid.
  */
 fun levelOf(vararg rows: String): Level {
     val level = Level(rows[0].length, rows.size)
@@ -17,6 +17,7 @@ fun levelOf(vararg rows: String): Level {
             'P' -> { level.entranceX = x; level.entranceY = y }
             'E' -> { level.exitX = x; level.exitY = y }
             's' -> level.spawns += Spawn(SpawnKind.SNAKE, x, y)
+            'c' -> level.spawns += Spawn(SpawnKind.CAVEMAN, x, y)
         }
     }
     return level
@@ -24,7 +25,10 @@ fun levelOf(vararg rows: String): Level {
 
 fun gameOn(level: Level): Game = Game(seed = 1).apply {
     startWithLevel(level)
-    for (s in level.spawns) if (s.kind == SpawnKind.SNAKE) enemies += Snake(s.tx * TILE + 2f, s.ty * TILE + 8f)
+    for (s in level.spawns) {
+        if (s.kind == SpawnKind.SNAKE) enemies += Snake(s.tx * TILE + 2f, s.ty * TILE + 8f)
+        if (s.kind == SpawnKind.CAVEMAN) enemies += Caveman(s.tx * TILE + 3f, s.ty * TILE + 2f)
+    }
 }
 
 /** Runs the game for [seconds] with [held] buttons down; [press] buttons are pressed on the first step. */

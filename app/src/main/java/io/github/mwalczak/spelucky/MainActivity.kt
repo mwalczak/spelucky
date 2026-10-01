@@ -145,6 +145,7 @@ class MainActivity : Activity() {
         KeyEvent.KEYCODE_SPACE, KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_BUTTON_A -> Btn.JUMP
         KeyEvent.KEYCODE_X, KeyEvent.KEYCODE_J, KeyEvent.KEYCODE_BUTTON_X, KeyEvent.KEYCODE_BUTTON_B -> Btn.WHIP
         KeyEvent.KEYCODE_C, KeyEvent.KEYCODE_K, KeyEvent.KEYCODE_BUTTON_Y -> Btn.ROPE
+        KeyEvent.KEYCODE_V, KeyEvent.KEYCODE_L, KeyEvent.KEYCODE_BUTTON_R1 -> Btn.BOMB
         KeyEvent.KEYCODE_P, KeyEvent.KEYCODE_ESCAPE, KeyEvent.KEYCODE_BUTTON_START -> Btn.PAUSE
         KeyEvent.KEYCODE_M -> Btn.MUSIC
         KeyEvent.KEYCODE_ENTER -> Btn.TAP

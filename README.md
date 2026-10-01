@@ -13,18 +13,23 @@ are synthesized when the app starts.
 - **JUMP**: hold longer to jump higher. Jump toward a wall to **grab the ledge**, then jump again to climb up.
 - **WHIP** kills snakes and bats. You can also jump on their heads.
 - **ROPE** throws a rope straight up. Climb it to reach high places (you start with 4).
+- **BOMB** throws a bomb (hold ▼ to drop it at your feet). It blows up dirt and monsters after 3 seconds.
+- **Shops** appear from level 2. Stand on an item to see what it does, press ▲ to buy it. Four random items
+  per shop: bombs, ropes, a baseball glove, climbing gloves, a pistol, a shotgun, a freeze gun, a
+  wall-breaker gun, a cape, a parachute and spring boots. With a gun, the WHIP button becomes **FIRE**.
+- **Cavemen** (from level 2) have 3 hearts: every whip hit, stomp or bullet takes one.
 - You have 4 hearts. Falling onto spikes is deadly, and very long falls hurt.
   When you die, the run starts over from level 1 with a brand-new random cave.
 
 The ♪ button in the top-right corner turns the music on or off.
 
-**Online leaderboard:** when a run ends, the loot and level are sent to
+**Online leaderboard:** when a run ends, the total gold collected (shopping doesn't lower it) and level are sent to
 [scores.walczaki.com](https://scores.walczaki.com) (backend: [mwalczak/mobile-scores](https://github.com/mwalczak/mobile-scores)).
 The first time, the game asks for a nickname; tap "Playing as ..." on the title screen to change it.
 Scores made without internet are kept and sent later. The leaderboard only appears in builds made
 with the `SCORES_KEY` repository secret (the key for `spelucky` in mobile-scores' `GAME_KEYS`).
 
-A keyboard or Bluetooth game controller also works (arrows/WASD, Space/Z jump, X whip, C rope, P pause, M music).
+A keyboard or Bluetooth game controller also works (arrows/WASD, Space/Z jump, X whip/fire, C rope, V bomb, P pause, M music).
 
 ## Installing on the tablet
 
@@ -53,7 +58,9 @@ Open the folder in **Android Studio** and press Run, or use the command line:
 | --- | --- |
 | `game/LevelGenerator.kt` | Random levels: a 4×4 grid of rooms built from templates, with a guaranteed path to the exit. Edit the room templates here. |
 | `game/Player.kt` | Movement, jumping, ladders, ledge grabbing, whip. Tweak speeds and jump height at the top. |
-| `game/Actors.kt` | Snakes, bats, treasure. |
+| `game/Actors.kt` | Snakes, bats, cavemen, treasure. |
+| `game/Items.kt` | Shop items (names, prices, descriptions), bombs and bullets. |
+| `ui/ItemArt.kt` | Drawings of the shop items, shopkeeper, bombs and the caveman. |
 | `game/Game.kt` | Game rules: damage, collecting, ropes, levels, game over. |
 | `ui/Renderer.kt` | All drawing, including colors and sprites. |
 | `ui/LeaderboardClient.kt` | Sends scores to the online leaderboard and loads the top 8. |

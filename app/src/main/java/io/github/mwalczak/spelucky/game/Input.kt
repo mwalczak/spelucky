@@ -15,6 +15,7 @@ object Btn {
     /** Any tap on the screen (used for menus). Only ever "pressed", never held. */
     const val TAP = 256
     const val MUSIC = 512
+    const val BOMB = 1024
 
     /** Buttons that shouldn't also count as "tap anywhere" (e.g. starting the game). */
     const val NOT_A_TAP = PAUSE or MUSIC

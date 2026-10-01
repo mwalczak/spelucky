@@ -6,6 +6,8 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import io.github.mwalczak.spelucky.game.Bat
+import io.github.mwalczak.spelucky.game.Caveman
+import io.github.mwalczak.spelucky.game.ShopItem
 import io.github.mwalczak.spelucky.game.Enemy
 import io.github.mwalczak.spelucky.game.Game
 import io.github.mwalczak.spelucky.game.Level
@@ -82,6 +84,7 @@ class Renderer(private val density: Float) {
     }
     private val path = Path()
     private val rect = RectF()
+    private val art = ItemArt()
 
     private fun dp(v: Float) = v * density
 
@@ -96,12 +99,18 @@ class Renderer(private val density: Float) {
         c.save()
         c.scale(zoom, zoom)
         // Snap the camera to whole screen pixels so tiles never show seams.
-        c.translate(-(g.camX * zoom).roundToInt() / zoom, -(g.camY * zoom).roundToInt() / zoom)
+        val shakeX = if (g.shake > 0f) sin(g.time * 90f) * 2.5f * g.shake / 0.35f else 0f
+        val shakeY = if (g.shake > 0f) sin(g.time * 70f + 1f) * 2f * g.shake / 0.35f else 0f
+        c.translate(-((g.camX + shakeX) * zoom).roundToInt() / zoom, -((g.camY + shakeY) * zoom).roundToInt() / zoom)
         drawTiles(c, g)
         drawDoors(c, g)
+        drawShop(c, g)
         for (item in g.pickups) drawPickup(c, item, g.time)
         for (e in g.enemies) drawEnemy(c, e)
+        for (b in g.bombs) art.bomb(c, b, g.time)
         if (g.state != Game.State.TITLE) drawPlayer(c, g.player)
+        for (b in g.bullets) art.bullet(c, b)
+        for (e in g.explosions) art.explosion(c, e)
         for (pt in g.particles) {
             p.color = pt.color
             p.alpha = (255 * (pt.life / pt.maxLife).coerceIn(0f, 1f)).toInt()
@@ -122,7 +131,8 @@ class Renderer(private val density: Float) {
             }
             Game.State.PLAYING -> {
                 drawHud(c, g, w)
-                controls.draw(c, touchMask)
+                g.offerHere?.let { drawOfferInfo(c, g, it.item, w, h) }
+                controls.draw(c, touchMask, fire = g.player.gun != null, bombs = g.player.bombs)
                 if (g.paused) drawPaused(c, w, h)
             }
             Game.State.DEAD -> {
@@ -155,7 +165,13 @@ class Renderer(private val density: Float) {
                 Tile.DIRT -> drawDirt(c, level, tx, ty, x, y, hsh)
                 Tile.BORDER -> drawStone(c, x, y, hsh)
                 else -> {
-                    if (hsh % 5 == 0) {
+                    if (level.shop?.contains(tx, ty) == true) {
+                        // Shop wallpaper: warm wooden planks.
+                        p.color = 0xFF3B2A1C.toInt()
+                        c.drawRect(x, y, x + TILE, y + TILE, p)
+                        p.color = 0xFF33241A.toInt()
+                        c.drawRect(x + 7.5f, y, x + 8.5f, y + TILE, p)
+                    } else if (hsh % 5 == 0) {
                         p.color = C.BG_BRICK
                         val bx = x + (hsh / 5 % 6)
                         val by = y + (hsh / 30 % 8)
@@ -335,6 +351,24 @@ class Renderer(private val density: Float) {
         c.restore()
     }
 
+    private fun drawShop(c: Canvas, g: Game) {
+        val shop = g.level.shop ?: return
+        // "SHOP" sign over the way in.
+        val sx = shop.doorX * TILE + TILE / 2
+        val sy = shop.doorY * TILE - 4f
+        p.color = 0xFF6B4423.toInt()
+        c.drawRect(sx - 13f, sy - 7f, sx + 13f, sy + 2f, p)
+        drawLabel(c, "SHOP", sx, sy, 6.5f, 0xFFFFE082.toInt(), 255)
+        for (o in g.offers) {
+            art.pedestal(c, o.tx, o.ty)
+            if (o.sold) continue
+            art.icon(c, o.item, o.tx * TILE + 2f, o.ty * TILE - 1f, 12f)
+            drawLabel(c, "$${o.item.price}", o.tx * TILE + TILE / 2, o.ty * TILE - 3f, 4.2f, C.GOLD, 255)
+        }
+        val facing = if (g.player.centerX < shop.keeperX * TILE + 8f) -1 else 1
+        art.shopkeeper(c, shop.keeperX, shop.keeperY, facing, g.time)
+    }
+
     private fun drawEnemy(c: Canvas, e: Enemy) {
         c.save()
         c.translate(e.x, e.y)
@@ -342,8 +376,22 @@ class Renderer(private val density: Float) {
         when (e) {
             is Snake -> drawSnake(c, e)
             is Bat -> drawBat(c, e)
+            is Caveman -> art.caveman(c, e)
         }
         c.restore()
+        if (e.flash > 0f) {
+            p.color = 0x99FFFFFF.toInt()
+            c.drawRect(e.x, e.y, e.right, e.bottom, p)
+        }
+        if (e.frozen > 0f) art.ice(c, e.x, e.y, e.w, e.h)
+        if (e.health > 1) {
+            // Little hearts over tough monsters.
+            for (i in 0 until e.health) {
+                p.color = C.HEART
+                val hx = e.centerX - e.health * 1.75f + i * 3.5f
+                c.drawRect(hx, e.y - 4f, hx + 2.5f, e.y - 2f, p)
+            }
+        }
     }
 
     private fun drawSnake(c: Canvas, s: Snake) {
@@ -401,9 +449,38 @@ class Renderer(private val density: Float) {
         c.translate(pl.x, pl.y)
         if (pl.facing < 0) c.scale(-1f, 1f, pl.w / 2, 0f)
 
-        val climbing = pl.state == Player.State.CLIMB
+        val climbing = pl.state == Player.State.CLIMB || pl.state == Player.State.WALL
+        val onWall = pl.state == Player.State.WALL
         val hanging = pl.state == Player.State.HANG
         val step = (pl.animTime * 10f).toInt() % 2
+
+        if (pl.parachuteOpen) {
+            line.color = 0xFFEEEEEE.toInt()
+            line.strokeWidth = 0.5f
+            c.drawLine(1f, 7f, -5f, -8f, line)
+            c.drawLine(9f, 7f, 15f, -8f, line)
+            aa.color = ItemArt.CHUTE
+            rect.set(-8f, -18f, 18f, -4f)
+            c.drawArc(rect, 180f, 180f, true, aa)
+            aa.color = 0xFFFFFFFF.toInt()
+            rect.set(0f, -18f, 10f, -4f)
+            c.drawArc(rect, 180f, 180f, true, aa)
+        }
+        if (pl.has(ShopItem.CAPE)) {
+            p.color = ItemArt.CAPE_RED
+            path.reset()
+            path.moveTo(1.5f, 7f)
+            path.lineTo(4f, 7f)
+            if (pl.gliding) {
+                path.lineTo(-7f, 13f)
+                path.lineTo(-6f, 4f)
+            } else {
+                path.lineTo(2.5f, 14f)
+                path.lineTo(-1f, 14f)
+            }
+            path.close()
+            c.drawPath(path, p)
+        }
 
         // Legs and boots.
         p.color = C.PANTS
@@ -431,6 +508,11 @@ class Renderer(private val density: Float) {
                 c.drawRect(6f, 11f, 8f, 14f, p)
             }
         }
+        if (pl.has(ShopItem.SPRING_BOOTS)) {
+            p.color = 0xFFB0BEC5.toInt()
+            c.drawRect(1.5f, 13f, 4.5f, 14f, p)
+            c.drawRect(5.5f, 13f, 8.5f, 14f, p)
+        }
         // Body.
         p.color = C.SHIRT
         c.drawRect(1.5f, 7f, 8.5f, 11f, p)
@@ -457,9 +539,18 @@ class Renderer(private val density: Float) {
         p.color = C.HAT_BRIM
         c.drawRect(0f, 2.5f, 10f, 3.5f, p)
 
-        // Arms.
-        p.color = C.SKIN
+        // Arms (in gloves, if any).
+        p.color = when {
+            pl.has(ShopItem.CLIMBING_GLOVES) -> ItemArt.GLOVE_BLUE
+            pl.has(ShopItem.BASEBALL_GLOVE) -> ItemArt.GLOVE_BROWN
+            else -> C.SKIN
+        }
         when {
+            onWall -> {
+                val a = if (step == 0) 1.5f else -1.5f
+                c.drawRect(8f, 2f + a, 10.5f, 6f + a, p)
+                c.drawRect(8f, 7f - a, 10.5f, 10f - a, p)
+            }
             hanging -> {
                 c.drawRect(7.5f, -2f, 9.5f, 7f, p)
                 c.drawRect(0.5f, -2f, 2.5f, 7f, p)
@@ -471,6 +562,16 @@ class Renderer(private val density: Float) {
             }
             pl.whipTimer > 0 -> c.drawRect(7.5f, 7f, 10.5f, 9f, p)
             else -> c.drawRect(7f, 8f, 9f, 10.5f, p)
+        }
+
+        // Gun in hand.
+        val gun = pl.gun
+        if (gun != null && !climbing && !hanging && !dead) {
+            c.save()
+            c.translate(6.5f, 4.5f)
+            c.scale(0.55f, 0.55f)
+            art.icon(c, gun, 0f, 0f, 16f)
+            c.restore()
         }
 
         // Whip.
@@ -528,7 +629,7 @@ class Renderer(private val density: Float) {
         val pl = g.player
         val top = dp(18f)
         aa.color = 0x66000000
-        rect.set(dp(12f), dp(10f), dp(12f) + dp(40f) * Player.MAX_HEALTH + dp(230f), dp(62f))
+        rect.set(dp(12f), dp(10f), dp(12f) + dp(40f) * Player.MAX_HEALTH + dp(300f), dp(62f))
         c.drawRoundRect(rect, dp(12f), dp(12f), aa)
 
         var x = dp(38f)
@@ -548,10 +649,31 @@ class Renderer(private val density: Float) {
         text.textSize = dp(26f)
         text.color = 0xFFFFFFFF.toInt()
         c.drawText("${pl.ropes}", x + dp(16f), cy + dp(9f), text)
+        // Bombs.
+        x += dp(62f)
+        art.icon(c, ShopItem.BOMBS, x - dp(14f), cy - dp(15f), dp(28f))
+        c.drawText("${pl.bombs}", x + dp(16f), cy + dp(9f), text)
         // Money.
-        x += dp(64f)
+        x += dp(56f)
         text.color = C.GOLD
         c.drawText("$${pl.money}", x, cy + dp(9f), text)
+
+        // Equipment and gun, in a row under the panel.
+        var ex = dp(18f)
+        val ey = dp(70f)
+        val gear = ShopItem.values().filter { it.equipment && pl.has(it) } + listOfNotNull(pl.gun)
+        for (item in gear) {
+            aa.color = 0x66000000
+            rect.set(ex, ey, ex + dp(40f), ey + dp(40f))
+            c.drawRoundRect(rect, dp(8f), dp(8f), aa)
+            art.icon(c, item, ex + dp(4f), ey + dp(4f), dp(32f))
+            if (item == ShopItem.WALL_BREAKER) {
+                text.textSize = dp(14f)
+                text.color = 0xFFFFFFFF.toInt()
+                c.drawText("${pl.breakerAmmo}", ex + dp(26f), ey + dp(38f), text)
+            }
+            ex += dp(46f)
+        }
         text.textAlign = Paint.Align.CENTER
 
         // Level number.
@@ -561,6 +683,31 @@ class Renderer(private val density: Float) {
         rect.set(w / 2 - dp(80f), dp(10f), w / 2 + dp(80f), dp(56f))
         c.drawRoundRect(rect, dp(12f), dp(12f), aa)
         c.drawText("LEVEL ${g.depth}", w / 2, dp(42f), text)
+    }
+
+    /** Shown at the top of the screen (clear of the shop itself) while standing on a shop item. */
+    private fun drawOfferInfo(c: Canvas, g: Game, item: ShopItem, w: Float, h: Float) {
+        val pw = dp(560f)
+        val left = w / 2 - pw / 2
+        val top = dp(68f)
+        aa.color = 0xDD000000.toInt()
+        rect.set(left, top, left + pw, top + dp(150f))
+        c.drawRoundRect(rect, dp(16f), dp(16f), aa)
+        art.icon(c, item, left + dp(20f), top + dp(25f), dp(80f))
+        val tx = left + dp(120f)
+        text.textAlign = Paint.Align.LEFT
+        text.textSize = dp(28f)
+        text.color = C.GOLD
+        c.drawText(item.title, tx, top + dp(44f), text)
+        text.textSize = dp(19f)
+        text.color = 0xFFFFFFFF.toInt()
+        c.drawText(item.description, tx, top + dp(78f), text)
+        val afford = g.player.money >= item.price
+        text.textSize = dp(22f)
+        text.color = if (afford) 0xFF9CCC65.toInt() else 0xFFFF8A80.toInt()
+        val buy = if (afford) "Press \u25B2 to buy for $${item.price}" else "Costs $${item.price}: you need more gold"
+        c.drawText(buy, tx, top + dp(120f), text)
+        text.textAlign = Paint.Align.CENTER
     }
 
     private fun dim(c: Canvas, alpha: Int, color: Int = 0) {
@@ -697,7 +844,7 @@ class Renderer(private val density: Float) {
         dim(c, (170 * k).toInt(), 0xFF300808.toInt())
         val a = (255 * k).toInt()
         drawLabel(c, "GAME OVER", w / 2, h * 0.36f, dp(90f), 0xFFFF5252.toInt(), a)
-        drawLabel(c, "You reached level ${g.depth} with $${g.player.money}", w / 2, h * 0.36f + dp(60f), dp(30f), 0xFFFFFFFF.toInt(), a)
+        drawLabel(c, "You reached level ${g.depth} and found $${g.player.totalGold}", w / 2, h * 0.36f + dp(60f), dp(30f), 0xFFFFFFFF.toInt(), a)
         if (g.newRecord) {
             drawLabel(c, "New record!", w / 2, h * 0.36f + dp(104f), dp(30f), C.GOLD, a)
         }

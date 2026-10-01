@@ -28,6 +28,7 @@ class ScoreBoardTest {
         ))
         game.onGameOver = { depth, money -> reports += depth to money }
         game.player.money = 1250
+        game.player.totalGold = 1250
         game.hurtPlayer(99, 0f)
         game.hurtPlayer(99, 0f) // already dead: no second report
         game.run(2f)

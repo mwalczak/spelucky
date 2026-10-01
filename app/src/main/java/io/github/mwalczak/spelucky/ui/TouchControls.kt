@@ -25,9 +25,10 @@ class TouchControls(private val density: Float) {
     val jump = Button(Btn.JUMP, "JUMP", 0xFF66BB6A.toInt())
     val whip = Button(Btn.WHIP, "WHIP", 0xFFFFA726.toInt())
     val rope = Button(Btn.ROPE, "ROPE", 0xFFD7A86E.toInt())
+    val bomb = Button(Btn.BOMB, "BOMB", 0xFFEF5350.toInt())
     val pause = Button(Btn.PAUSE, "", 0xFFFFFFFF.toInt())
     val music = Button(Btn.MUSIC, "", 0xFFFFFFFF.toInt())
-    private val actionButtons = listOf(jump, whip, rope)
+    private val actionButtons = listOf(jump, whip, rope, bomb)
 
     var padX = 0f
     var padY = 0f
@@ -63,6 +64,9 @@ class TouchControls(private val density: Float) {
         rope.r = dp(40f)
         rope.cx = jump.cx - dp(12f)
         rope.cy = jump.cy - jump.r - dp(36f) - rope.r
+        bomb.r = dp(40f)
+        bomb.cx = whip.cx - dp(6f)
+        bomb.cy = whip.cy - whip.r - dp(30f) - bomb.r
         pause.r = dp(26f)
         pause.cx = w - dp(46f)
         pause.cy = dp(46f)
@@ -130,7 +134,8 @@ class TouchControls(private val density: Float) {
         input.setTouch(mask)
     }
 
-    fun draw(c: Canvas, mask: Int) {
+    /** [fire]: the whip button shoots (a gun is held). [bombs]: how many bombs are left. */
+    fun draw(c: Canvas, mask: Int, fire: Boolean = false, bombs: Int = 0) {
         // D-pad.
         fill.color = 0x22FFFFFF
         c.drawCircle(padX, padY, padR, fill)
@@ -144,14 +149,17 @@ class TouchControls(private val density: Float) {
 
         for (b in actionButtons) {
             val down = mask and b.bit != 0
-            fill.color = (b.color and 0x00FFFFFF) or (if (down) 0x99000000.toInt() else 0x44000000)
+            val empty = b == bomb && bombs == 0
+            val color = if (b == whip && fire) 0xFF90A4AE.toInt() else b.color
+            fill.color = (color and 0x00FFFFFF) or (if (down) 0x99000000.toInt() else 0x44000000)
             c.drawCircle(b.cx, b.cy, b.r, fill)
-            stroke.color = (b.color and 0x00FFFFFF) or 0xCC000000.toInt()
+            stroke.color = (color and 0x00FFFFFF) or (if (empty) 0x55000000 else 0xCC000000.toInt())
             stroke.strokeWidth = dp(3f)
             c.drawCircle(b.cx, b.cy, b.r, stroke)
-            text.color = 0xEEFFFFFF.toInt()
+            text.color = if (empty) 0x66FFFFFF else 0xEEFFFFFF.toInt()
             text.textSize = b.r * 0.42f
-            c.drawText(b.label, b.cx, b.cy + text.textSize * 0.36f, text)
+            val label = if (b == whip && fire) "FIRE" else b.label
+            c.drawText(label, b.cx, b.cy + text.textSize * 0.36f, text)
         }
 
         // Pause button.

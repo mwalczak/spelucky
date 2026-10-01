@@ -27,6 +27,8 @@ class LevelGenerator(private val rng: Random) {
         const val JUMP_UP = 2
         /** Tiles the player can move sideways while in the air at jump height. */
         const val JUMP_SIDE = 2
+        /** Shops appear from this level on. */
+        const val SHOP_FROM_DEPTH = 2
 
         // Legend: . empty   # dirt   1 dirt 50%   2 dirt 25%   L ladder
         //         ^ spikes 60%   $ treasure spot
@@ -315,7 +317,20 @@ class LevelGenerator(private val rng: Random) {
             }
         }
 
-        // 4. Entrance and exit doors.
+        // 4. From level 2 on, a side room next to the path becomes a shop.
+        if (!simple && depth >= SHOP_FROM_DEPTH) {
+            val candidates = mutableListOf<Triple<Int, Int, Int>>() // room x, room y, side the door faces
+            for (ry in 0 until ROOMS_Y) for (rx in 0 until ROOMS_X) {
+                if (rooms[ry][rx].onPath) continue
+                if (rx > 0 && rooms[ry][rx - 1].onPath) candidates += Triple(rx, ry, -1)
+                if (rx < ROOMS_X - 1 && rooms[ry][rx + 1].onPath) candidates += Triple(rx, ry, 1)
+            }
+            if (candidates.isEmpty()) return null
+            val (rx, ry, side) = candidates.random(rng)
+            buildShop(level, rx, ry, side)
+        }
+
+        // 5. Entrance and exit doors.
         val entrance = pickFloorCell(level, startX, 0) ?: return null
         level.entranceX = entrance.first
         level.entranceY = entrance.second
@@ -323,9 +338,29 @@ class LevelGenerator(private val rng: Random) {
         level.exitX = exit.first
         level.exitY = exit.second
 
-        // 5. Treasure and monsters.
+        // 6. Treasure and monsters.
         if (!simple) addSpawns(level, depth)
         return level
+    }
+
+    /** Carves a closed room with one open side ([side] -1 = left, 1 = right) facing the path. */
+    private fun buildShop(level: Level, rx: Int, ry: Int, side: Int) {
+        val ox = 1 + rx * RW
+        val oy = 1 + ry * RH
+        for (ly in 0 until RH) for (lx in 0 until RW) {
+            val inside = ly in 2..RH - 2 && lx in 1..RW - 2
+            level[ox + lx, oy + ly] = if (inside) Tile.EMPTY else Tile.DIRT
+        }
+        // Columns counted from the door side.
+        fun col(fromDoor: Int) = if (side < 0) ox + fromDoor else ox + RW - 1 - fromDoor
+        val floorY = oy + RH - 2
+        for (ly in RH - 3..RH - 2) level[col(0), oy + ly] = Tile.EMPTY
+        val slots = (3..6).map { col(it) to floorY }.sortedBy { it.first }
+        level.shop = ShopRoom(
+            ox, oy, ox + RW - 1, oy + RH - 1, slots,
+            keeperX = col(8), keeperY = floorY,
+            doorX = col(0), doorY = floorY - 1,
+        )
     }
 
     private fun stamp(level: Level, t: Array<String>, ox: Int, oy: Int, mirror: Boolean, noSpikes: Boolean) {
@@ -370,8 +405,9 @@ class LevelGenerator(private val rng: Random) {
 
         val floor = mutableListOf<Pair<Int, Int>>()
         val ceiling = mutableListOf<Pair<Int, Int>>()
+        val shop = level.shop
         for (y in 1 until level.height - 1) for (x in 1 until level.width - 1) {
-            if (level[x, y] != Tile.EMPTY || isDoor(x, y)) continue
+            if (level[x, y] != Tile.EMPTY || isDoor(x, y) || shop?.contains(x, y) == true) continue
             if (level.isSolid(x, y + 1) && level.hasNoRopeOrLadderNear(x, y)) floor += x to y
             if (level.isSolid(x, y - 1) && level[x, y + 1] == Tile.EMPTY && level[x, y + 2] == Tile.EMPTY) ceiling += x to y
         }
@@ -382,6 +418,7 @@ class LevelGenerator(private val rng: Random) {
         // Treasure from "$" spots in the templates.
         for (spot in treasureSpots) {
             if (spot in used || level[spot.first, spot.second] != Tile.EMPTY || isDoor(spot.first, spot.second)) continue
+            if (shop?.contains(spot.first, spot.second) == true) continue
             if (rng.nextInt(100) < 65) {
                 level.spawns += Spawn(randomTreasure(), spot.first, spot.second)
                 used += spot
@@ -411,6 +448,15 @@ class LevelGenerator(private val rng: Random) {
             level.spawns += Spawn(SpawnKind.SNAKE, c.first, c.second)
             used += c
             snakes--
+        }
+        // Cavemen from level 2: tough, with 3 hearts.
+        var cavemen = min(depth - 1, 4)
+        for (c in floor) {
+            if (cavemen <= 0) break
+            if (c in used || !farFromEntrance(c.first, c.second)) continue
+            level.spawns += Spawn(SpawnKind.CAVEMAN, c.first, c.second)
+            used += c
+            cavemen--
         }
         var bats = min(1 + depth, 8)
         for (c in ceiling) {
@@ -455,7 +501,16 @@ class LevelGenerator(private val rng: Random) {
         return y
     }
 
+    /** The exit (and the shop, if any) can be reached from the entrance. */
     fun isSolvable(l: Level): Boolean {
+        val seen = reachable(l)
+        if (!seen[l.exitY * l.width + l.exitX]) return false
+        val shop = l.shop ?: return true
+        return shop.slots.all { (x, y) -> seen[y * l.width + x] }
+    }
+
+    /** Every cell the player can get to from the entrance. */
+    fun reachable(l: Level): BooleanArray {
         val seen = BooleanArray(l.width * l.height)
         val queue = ArrayDeque<Int>()
         fun visit(x: Int, y: Int?) {
@@ -471,7 +526,6 @@ class LevelGenerator(private val rng: Random) {
             val i = queue.removeFirst()
             val x = i % l.width
             val y = i / l.width
-            if (x == l.exitX && y == l.exitY) return true
 
             // Walk (and maybe fall) sideways.
             for (dx in intArrayOf(-1, 1)) {
@@ -493,6 +547,6 @@ class LevelGenerator(private val rng: Random) {
                 }
             }
         }
-        return false
+        return seen
     }
 }

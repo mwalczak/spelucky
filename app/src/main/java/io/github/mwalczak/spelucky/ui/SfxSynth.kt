@@ -18,7 +18,8 @@ object SfxSynth {
     /** Peak level of each sound (1.0 = as loud as possible). */
     fun loudness(s: Sound): Float = when (s) {
         Sound.LAND, Sound.BAT -> 0.45f
-        Sound.JUMP, Sound.ROPE -> 0.6f
+        Sound.JUMP, Sound.ROPE, Sound.THROW -> 0.6f
+        Sound.HIT, Sound.SHOOT, Sound.FREEZE -> 0.75f
         else -> 0.9f // collecting, whip, hurt, death, kills, door: the important ones
     }
 
@@ -139,6 +140,54 @@ object SfxSynth {
                 tone(392f, 196f, 0.9f, Wave.SQUARE, decay = 1.5f),
             ),
             concat(silence(0.96f), tone(98f, 60f, 0.9f, Wave.TRIANGLE, decay = 1.5f, volume = 0.8f)),
+        )
+
+        // A thud and a grunt.
+        Sound.HIT -> mix(
+            tone(300f, 120f, 0.12f, Wave.SQUARE, decay = 3f),
+            tone(800f, 200f, 0.08f, Wave.NOISE, decay = 4f, volume = 0.6f),
+        )
+
+        Sound.THROW -> tone(400f, 900f, 0.1f, Wave.NOISE, decay = 2f)
+
+        // A big boom: low rumble plus crackling noise.
+        Sound.EXPLOSION -> mix(
+            tone(1200f, 100f, 0.9f, Wave.NOISE, decay = 3f),
+            tone(90f, 35f, 0.8f, Wave.TRIANGLE, decay = 2.5f, volume = 0.9f),
+            tone(3000f, 800f, 0.15f, Wave.NOISE, decay = 6f, volume = 0.5f),
+        )
+
+        Sound.SHOOT -> mix(
+            tone(2500f, 600f, 0.12f, Wave.NOISE, decay = 5f),
+            tone(900f, 200f, 0.1f, Wave.SQUARE, decay = 5f, volume = 0.5f),
+        )
+
+        Sound.SHOTGUN -> mix(
+            tone(1800f, 300f, 0.3f, Wave.NOISE, decay = 4f),
+            tone(150f, 50f, 0.25f, Wave.SQUARE, decay = 4f, volume = 0.7f),
+        )
+
+        // A wobbly "pew" going up, like ice crystals.
+        Sound.FREEZE -> mix(
+            tone(1200f, 2400f, 0.25f, Wave.SINE, decay = 2f),
+            tone(1800f, 3600f, 0.25f, Wave.SINE, decay = 2f, volume = 0.5f),
+        )
+
+        // Glass breaking.
+        Sound.SHATTER -> mix(
+            tone(4000f, 2000f, 0.25f, Wave.NOISE, decay = 4f),
+            concat(tone(2637f, 2637f, 0.05f, Wave.SINE), tone(3136f, 3136f, 0.05f, Wave.SINE), tone(3951f, 3951f, 0.15f, Wave.SINE, decay = 4f)),
+        )
+
+        // Cash register: "ka-ching!".
+        Sound.BUY -> concat(
+            tone(300f, 200f, 0.05f, Wave.NOISE),
+            tone(1568f, 1568f, 0.08f, Wave.SQUARE), tone(2093f, 2093f, 0.35f, Wave.SQUARE, decay = 3f),
+        )
+
+        // "Uh-uh": two low buzzes.
+        Sound.DENIED -> concat(
+            tone(180f, 170f, 0.12f, Wave.SQUARE), silence(0.05f), tone(150f, 140f, 0.18f, Wave.SQUARE, decay = 1f),
         )
 
         Sound.BAT -> concat(
