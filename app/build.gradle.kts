@@ -11,8 +11,11 @@ android {
         applicationId = "io.github.mwalczak.spelucky"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1"
+        // GitHub Actions builds are numbered (build-12 has versionCode 12), so the game can
+        // tell when a newer release exists. Local builds are version 1 and never auto-update.
+        val buildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+        versionCode = buildNumber
+        versionName = "1.$buildNumber"
 
         // Online leaderboard (github.com/mwalczak/mobile-scores). Without a key, e.g. in a
         // local build, the game works normally and just hides the leaderboard.

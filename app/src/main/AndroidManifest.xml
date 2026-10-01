@@ -3,6 +3,8 @@
 
     <!-- For the online leaderboard. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- So the game can install its own updates from GitHub Releases. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:allowBackup="true"

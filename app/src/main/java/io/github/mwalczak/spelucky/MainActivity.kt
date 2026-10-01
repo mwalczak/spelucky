@@ -16,6 +16,7 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import io.github.mwalczak.spelucky.ui.GameView
 import io.github.mwalczak.spelucky.ui.Music
+import io.github.mwalczak.spelucky.ui.Updater
 import io.github.mwalczak.spelucky.ui.SoundFx
 import io.github.mwalczak.spelucky.game.Btn
 import io.github.mwalczak.spelucky.game.Game
@@ -26,6 +27,7 @@ class MainActivity : Activity() {
     private lateinit var view: GameView
     private lateinit var sfx: SoundFx
     private lateinit var music: Music
+    private lateinit var updater: Updater
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,6 +40,9 @@ class MainActivity : Activity() {
         music = Music()
         view = GameView(this, sfx, music, ::askName)
         setContentView(view)
+        // Local builds (version 1) never update themselves; GitHub builds use the build number.
+        updater = Updater(this, view.game.update, if (BuildConfig.VERSION_CODE > 1) BuildConfig.VERSION_CODE else 0)
+        view.onUpdateTap = updater::install
         hideSystemBars()
     }
 
@@ -49,6 +54,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         view.refreshLeaderboard()
+        updater.check()
     }
 
     /** A simple "what's your name?" dialog for the online leaderboard. */
@@ -97,6 +103,7 @@ class MainActivity : Activity() {
         super.onDestroy()
         sfx.release()
         music.release()
+        updater.release()
     }
 
     @Deprecated("Deprecated in Java")

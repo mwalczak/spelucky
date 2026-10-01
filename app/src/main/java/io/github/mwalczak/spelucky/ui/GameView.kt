@@ -78,6 +78,9 @@ class GameView(
     /** Called when the app comes back to the front. */
     fun refreshLeaderboard() = leaderboard.refresh()
 
+    /** Called when the "update available" banner is tapped. */
+    var onUpdateTap: () -> Unit = {}
+
     override fun surfaceCreated(holder: SurfaceHolder) {
         running = true
         thread = Thread(::loop, "game-loop").also { it.start() }
@@ -133,11 +136,15 @@ class GameView(
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.actionMasked == MotionEvent.ACTION_DOWN && game.state == Game.State.TITLE &&
-            renderer.nameRect.contains(event.x, event.y)
-        ) {
-            changeName()
-            return true
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && game.state == Game.State.TITLE) {
+            if (renderer.nameRect.contains(event.x, event.y)) {
+                changeName()
+                return true
+            }
+            if (renderer.updateRect.contains(event.x, event.y)) {
+                onUpdateTap()
+                return true
+            }
         }
         controls.onTouch(event, input)
         return true

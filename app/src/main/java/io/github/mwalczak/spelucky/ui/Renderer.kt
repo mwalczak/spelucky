@@ -572,6 +572,8 @@ class Renderer(private val density: Float) {
 
     /** Where the "your name" line is on the title screen, so a tap there can change it. */
     val nameRect = RectF()
+    /** Where the "update available" banner is, so a tap there installs it. */
+    val updateRect = RectF()
 
     private fun drawTitle(c: Canvas, g: Game, w: Float, h: Float) {
         dim(c, 120)
@@ -586,10 +588,50 @@ class Renderer(private val density: Float) {
         val a = (170 + 85 * sin(g.time * 4f)).toInt()
         drawLabel(c, "Tap to start", cx, h * 0.7f, dp(40f), 0xFFFFFFFF.toInt(), a)
         if (board.enabled) drawBoard(c, board, w, h) else nameRect.setEmpty()
+        drawUpdate(c, g, w, h)
         drawLabel(
             c, "Left side: move, climb, ▲ at a door to go in     Right side: JUMP  WHIP  ROPE",
             w / 2, h - dp(28f), dp(18f), 0xFFCCCCCC.toInt(), 220,
         )
+    }
+
+    private fun drawUpdate(c: Canvas, g: Game, w: Float, h: Float) {
+        val u = g.update
+        if (u.currentBuild > 0) {
+            text.textAlign = Paint.Align.RIGHT
+            text.textSize = dp(16f)
+            text.color = 0x99FFFFFF.toInt()
+            c.drawText("build ${u.currentBuild}", w - dp(16f), h - dp(12f), text)
+            text.textAlign = Paint.Align.CENTER
+        }
+        if (!u.available) {
+            updateRect.setEmpty()
+            return
+        }
+        val label = when {
+            u.message != null -> u.message!!
+            u.progress >= 1f -> "Installing update..."
+            u.progress >= 0f -> "Downloading update... ${(u.progress * 100).toInt()}%"
+            else -> "New version available (build ${u.latestBuild}): tap to update!"
+        }
+        text.textSize = dp(22f)
+        val tw = text.measureText(label)
+        val left = dp(24f)
+        val top = dp(24f)
+        updateRect.set(left, top, left + tw + dp(48f), top + dp(56f))
+        val pulse = if (u.busy) 1f else 0.85f + 0.15f * sin(g.time * 4f)
+        aa.color = 0xFF2E7D32.toInt()
+        aa.alpha = (230 * pulse).toInt()
+        c.drawRoundRect(updateRect, dp(14f), dp(14f), aa)
+        aa.alpha = 255
+        if (u.progress in 0f..1f) {
+            // Progress bar along the bottom of the banner.
+            aa.color = 0xFFA5D6A7.toInt()
+            c.drawRect(updateRect.left + dp(12f), updateRect.bottom - dp(8f),
+                updateRect.left + dp(12f) + (updateRect.width() - dp(24f)) * u.progress, updateRect.bottom - dp(4f), aa)
+        }
+        text.color = 0xFFFFFFFF.toInt()
+        c.drawText(label, updateRect.centerX(), updateRect.centerY() + dp(8f), text)
     }
 
     private fun drawBoard(c: Canvas, board: ScoreBoard, w: Float, h: Float) {

@@ -33,6 +33,11 @@ Every push to `main` is built by GitHub Actions and published as a
 `spelucky.apk` and open it. Android will ask to allow installs from the browser once.
 Newer builds install over older ones, and saved records are kept.
 
+After that, the game updates itself: when a newer build is on GitHub, the title screen shows
+**"New version available: tap to update!"**. One tap downloads it, and Android asks to confirm
+the update (the very first time it also asks to allow Spelucky to install apps). Builds made on
+your own computer are version 1 and never offer updates.
+
 Builds from other branches are attached to their workflow run under **Actions** as `spelucky-apk`.
 
 ## Working on the code
@@ -52,6 +57,7 @@ Open the folder in **Android Studio** and press Run, or use the command line:
 | `game/Game.kt` | Game rules: damage, collecting, ropes, levels, game over. |
 | `ui/Renderer.kt` | All drawing, including colors and sprites. |
 | `ui/LeaderboardClient.kt` | Sends scores to the online leaderboard and loads the top 8. |
+| `ui/Updater.kt` | Checks GitHub Releases for a newer build and installs it. |
 | `ui/TouchControls.kt` | On-screen buttons and their layout. |
 | `ui/SfxSynth.kt` | The sound effects (coin, gem, whip, hurt, death, ...). Each one is a few lines of tones and noise. |
 | `ui/MusicSynth.kt` | The background music. The tune is written as note names (`"A4:2 C5:2 ..."`), so it is easy to change. |

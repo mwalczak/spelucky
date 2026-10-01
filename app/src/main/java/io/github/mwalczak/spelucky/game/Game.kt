@@ -58,6 +58,7 @@ class Game(seed: Long = System.nanoTime()) {
     var onGameOver: (depth: Int, money: Int) -> Unit = { _, _ -> }
 
     val scores = ScoreBoard()
+    val update = UpdateState()
 
     init {
         buildLevel()
